@@ -1,0 +1,41 @@
+-- =========================================================================
+-- VALIDATION AND TESTING SCRIPT
+-- USE THIS SCRIPT TO VERIFY THE PL/SQL IMPLEMENTATION
+-- =========================================================================
+
+SET SERVEROUTPUT ON;
+
+-- 1. Test Case: Successful Registration
+PROMPT Testing successful registration...
+BEGIN
+    Smart_City_Pkg.register_citizen(103, 'Fahad Al-Otaibi', 28, 'Male', 1);
+END;
+/
+
+-- 2. Test Case: Verification of Auditing Trigger
+PROMPT Verifying Audit Log...
+SELECT * FROM City_Audit_Log WHERE action_performed LIKE '%Fahad%';
+
+-- 3. Test Case: Exception Handling (Invalid District)
+PROMPT Testing Invalid District Exception...
+BEGIN
+    Smart_City_Pkg.register_citizen(104, 'Noor Ali', 22, 'Female', 99);
+END;
+/
+
+-- 4. Test Case: Exception Handling (Duplicate ID)
+PROMPT Testing Duplicate ID Exception...
+BEGIN
+    Smart_City_Pkg.register_citizen(101, 'Duplicate Name', 35, 'Male', 1);
+END;
+/
+
+-- 5. Test Case: Function and Cursor Verification
+PROMPT Testing Population Calculation Function...
+DECLARE
+    v_pop INT;
+BEGIN
+    v_pop := Smart_City_Pkg.get_district_population(1);
+    DBMS_OUTPUT.PUT_LINE('Current Population in District 1: ' || v_pop);
+END;
+/
