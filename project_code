@@ -1,0 +1,91 @@
+-- =========================================================================
+-- PROJECT TITLE: Smart City Database Management System
+-- STUDENT ID: 32583/2025 | INSTRUCTOR: Eric Maniraguha
+-- =========================================================================
+
+-- PHASE 1: DDL (Tables & Constraints)
+DROP TABLE City_Audit_Log CASCADE CONSTRAINTS;
+DROP TABLE Services CASCADE CONSTRAINTS;
+DROP TABLE Buildings CASCADE CONSTRAINTS;
+DROP TABLE Citizens CASCADE CONSTRAINTS;
+DROP TABLE Districts CASCADE CONSTRAINTS;
+DROP SEQUENCE audit_seq;
+
+CREATE TABLE Districts (
+    district_id INT PRIMARY KEY,
+    district_name VARCHAR2(100) NOT NULL UNIQUE
+);
+
+CREATE TABLE Citizens (
+    citizen_id INT PRIMARY KEY,
+    full_name VARCHAR2(150) NOT NULL,
+    age INT CHECK (age >= 0),
+    gender VARCHAR2(10) CHECK (gender IN ('Male', 'Female')),
+    district_id INT,
+    CONSTRAINT fk_citizen_district FOREIGN KEY (district_id) REFERENCES Districts(district_id) ON DELETE SET NULL
+);
+
+CREATE TABLE Buildings (
+    building_id INT PRIMARY KEY,
+    building_name VARCHAR2(150) NOT NULL,
+    type VARCHAR2(50),
+    district_id INT,
+    CONSTRAINT fk_building_district FOREIGN KEY (district_id) REFERENCES Districts(district_id) ON DELETE CASCADE
+);
+
+CREATE TABLE Services (
+    service_id INT PRIMARY KEY,
+    service_name VARCHAR2(150) NOT NULL,
+    building_id INT,
+    CONSTRAINT fk_service_building FOREIGN KEY (building_id) REFERENCES Buildings(building_id) ON DELETE CASCADE
+);
+
+CREATE TABLE City_Audit_Log (
+    log_id INT PRIMARY KEY,
+    action_performed VARCHAR2(100),
+    performed_by VARCHAR2(100),
+    action_date TIMESTAMP
+);
+
+CREATE SEQUENCE audit_seq START WITH 1 INCREMENT BY 1;
+
+-- PHASE 2: Sample Data
+INSERT INTO Districts VALUES (1, 'Kicukiro');
+INSERT INTO Districts VALUES (2, 'Nyarugenge');
+INSERT INTO Citizens VALUES (101, 'Ali Mohamed', 30, 'Male', 1);
+INSERT INTO Buildings VALUES (201, 'City Hospital', 'Hospital', 1);
+INSERT INTO Services VALUES (301, 'Health Service', 201);
+COMMIT;
+
+-- PHASE 3: Trigger & Auditing
+CREATE OR REPLACE TRIGGER trg_audit_citizen_reg
+AFTER INSERT ON Citizens FOR EACH ROW
+BEGIN
+    INSERT INTO City_Audit_Log VALUES (audit_seq.NEXTVAL, 'New Citizen: ' || :NEW.full_name, USER, SYSTIMESTAMP);
+END;
+/
+
+-- PHASE 4: Packages & Procedures
+CREATE OR REPLACE PACKAGE Smart_City_Pkg AS
+    PROCEDURE register_citizen (p_id INT, p_name VARCHAR2, p_age INT, p_gender VARCHAR2, p_dist_id INT);
+    FUNCTION get_district_population(p_dist_id INT) RETURN INT;
+END Smart_City_Pkg;
+/
+
+CREATE OR REPLACE PACKAGE BODY Smart_City_Pkg AS
+    PROCEDURE register_citizen (p_id INT, p_name VARCHAR2, p_age INT, p_gender VARCHAR2, p_dist_id INT) IS
+    BEGIN
+        INSERT INTO Citizens VALUES (p_id, p_name, p_age, p_gender, p_dist_id);
+        DBMS_OUTPUT.PUT_LINE('Success!');
+    EXCEPTION
+        WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    END;
+
+    FUNCTION get_district_population(p_dist_id INT) RETURN INT IS
+        v_count INT;
+    BEGIN
+        SELECT COUNT(*) INTO v_count FROM Citizens WHERE district_id = p_dist_id;
+        RETURN v_count;
+    END;
+END Smart_City_Pkg;
+/
